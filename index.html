@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Bầu chọn ngày đá banh</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f3f3fc; margin: 0; }
+    .container { max-width: 430px; margin: 30px auto; background: #fff; padding: 28px 22px; border-radius: 12px; box-shadow: 0 0 24px #aaa2; }
+    h2 { color: #15a74c; margin-bottom: 10px; }
+    form { margin-bottom: 24px; }
+    input[type=text] { padding: 6px; width: 170px; border-radius: 6px; border: 1px solid #ddd; margin-right: 10px; }
+    select { padding: 5px 8px; border-radius: 6px; }
+    button { padding: 7px 22px; border-radius: 7px; background: #34d063; border: none; color: #fff; font-weight: bold; font-size: 16px; cursor: pointer;}
+    .msg { margin: 10px 0; color: #1468a8; font-size: 17px;}
+    table { border-collapse: collapse; width: 100%; margin-top: 20px;}
+    th, td { border: 1px solid #eee; padding: 8px 6px; text-align: left;}
+    th { background: #d2f4e1; }
+    .week-info { font-size: 14px; color: #999; margin-bottom: 14px;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Bầu chọn ngày đá banh tuần này</h2>
+    <div class="week-info" id="weekInfo"></div>
+    <form id="voteForm">
+      <input type="text" id="name" placeholder="Nhập tên của bạn" required>
+      <select id="choice" required>
+        <option value="">--Chọn ngày--</option>
+        <option value="Thứ 4">Thứ 4</option>
+        <option value="Thứ 5">Thứ 5</option>
+        <option value="Thứ 6">Thứ 6</option>
+        <option value="Thứ 7">Thứ 7</option>
+        <option value="Chủ Nhật">Chủ Nhật</option>
+      </select>
+      <button type="submit">Vote</button>
+    </form>
+    <div class="msg" id="msg"></div>
+    <h3>Danh sách đã vote (tuần này):</h3>
+    <table id="voteTable">
+      <thead>
+        <tr><th>Tên</th><th>Ngày vote</th><th>Lựa chọn</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <script>
+    // === CONFIG: dán URL API Google Script của bạn vào đây ===
+    const API_URL = "https://script.google.com/macros/s/AKfycbzuuFamVmRAu2ykbSDyiDqBcLMZrHD5cx4UTIGCFExrws8u6lvxvaLPL9T_A3EtHj-l/exec";
+    // Hàm lấy số tuần hiện tại
+    function getWeekNumber(d) {
+      d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+      var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+      var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+      return weekNo;
+    }
+    // Hiện số tuần hiện tại
+    const now = new Date();
+    const week = getWeekNumber(now);
+    document.getElementById('weekInfo').innerText = 
+      "Tuần " + week + " (" + now.toLocaleDateString('vi-VN') + ")";
+    // Load danh sách vote
+    function loadVotes() {
+      fetch(API_URL)
+        .then(res => res.json())
+        .then(data => {
+          // Lọc theo tuần hiện tại
+          const votes = data.filter(row => +row.week === week);
+          const tbody = document.querySelector('#voteTable tbody');
+          tbody.innerHTML = '';
+          votes.reverse().forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${row.name}</td><td>${row.date}</td><td>${row.choice}</td>`;
+            tbody.appendChild(tr);
+          });
+        });
+    }
+    loadVotes();
+    // Gửi vote
+    document.getElementById('voteForm').onsubmit = function(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const choice = document.getElementById('choice').value;
+      if (!name || !choice) return;
+      // Gửi vote
+      document.getElementById('msg').innerText = "Đang gửi vote...";
+      fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          date: new Date().toLocaleDateString('vi-VN'),
+          choice,
+          week
+        }),
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(res => res.text())
+      .then(() => {
+        document.getElementById('msg').innerText = "Vote thành công! Cảm ơn bạn.";
+        loadVotes();
+      })
+      .catch(() => {
+        document.getElementById('msg').innerText = "Lỗi gửi vote, thử lại!";
+      });
+    };
+  </script>
+</body>
+</html>
