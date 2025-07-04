@@ -4,18 +4,218 @@
   <meta charset="UTF-8">
   <title>Bầu chọn ngày đá banh</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f3f3fc; margin: 0; }
-    .container { max-width: 430px; margin: 30px auto; background: #fff; padding: 28px 22px; border-radius: 12px; box-shadow: 0 0 24px #aaa2; }
-    h2 { color: #15a74c; margin-bottom: 10px; }
-    form { margin-bottom: 24px; }
-    input[type=text] { padding: 6px; width: 170px; border-radius: 6px; border: 1px solid #ddd; margin-right: 10px; }
-    select { padding: 5px 8px; border-radius: 6px; }
-    button { padding: 7px 22px; border-radius: 7px; background: #34d063; border: none; color: #fff; font-weight: bold; font-size: 16px; cursor: pointer;}
-    .msg { margin: 10px 0; color: #1468a8; font-size: 17px;}
-    table { border-collapse: collapse; width: 100%; margin-top: 20px;}
-    th, td { border: 1px solid #eee; padding: 8px 6px; text-align: left;}
-    th { background: #d2f4e1; }
-    .week-info { font-size: 14px; color: #999; margin-bottom: 14px;}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8f9fa;
+      color: #2c3e50;
+      line-height: 1.6;
+    }
+    
+    .container { 
+      max-width: 480px; 
+      margin: 40px auto; 
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    
+    .header h2 { 
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .week-info { 
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    
+    .content {
+      padding: 32px 24px;
+    }
+    
+    .period-selector {
+      margin-bottom: 24px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .period-selector label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #64748b;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    
+    .period-selector label:hover {
+      color: #475569;
+    }
+    
+    .period-selector input[type="radio"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #667eea;
+    }
+    
+    .vote-form {
+      background: #f8fafc;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 32px;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+    
+    input[type="text"], select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: white;
+    }
+    
+    input[type="text"]:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .submit-btn {
+      width: 100%;
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .submit-btn:hover {
+      background: #5a67d8;
+    }
+    
+    .submit-btn:active {
+      transform: translateY(1px);
+    }
+    
+    .message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      text-align: center;
+      background: #e0f2fe;
+      color: #0277bd;
+      border: 1px solid #b3e5fc;
+    }
+    
+    .results-section h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #1e293b;
+    }
+    
+    .summary {
+      background: #f1f5f9;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    
+    .summary b {
+      color: #059669;
+    }
+    
+    .votes-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .votes-table th {
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 600;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 14px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .votes-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 14px;
+    }
+    
+    .votes-table tr:hover {
+      background: #f8fafc;
+    }
+    
+    .votes-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #94a3b8;
+      font-style: italic;
+    }
+    
+    @media (max-width: 520px) {
+      .container {
+        margin: 20px;
+        border-radius: 12px;
+      }
+      
+      .header {
+        padding: 24px 20px;
+      }
+      
+      .content {
+        padding: 24px 20px;
+      }
+      
+      .period-selector {
+        flex-direction: column;
+        gap: 12px;
+      }
+    }
   </style>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -23,28 +223,49 @@
 </head>
 <body>
   <div class="container">
-    <h2>Bầu chọn ngày đá banh tuần này</h2>
-    <div class="week-info" id="weekInfo"></div>
-    <!-- Chọn đợt vote -->
-    <div style="margin-bottom:14px">
-      <label><input type="radio" name="period" value="dau-tuan" checked> Đầu tuần (T2-T3-T4)</label>
-      <label style="margin-left:12px;"><input type="radio" name="period" value="cuoi-tuan"> Cuối tuần (T6-T7-CN)</label>
+    <div class="header">
+      <h2>Bầu chọn ngày đá banh only 19h30</h2>
+      <div class="week-info" id="weekInfo"></div>
     </div>
-    <form id="voteForm">
-      <input type="text" id="name" placeholder="Nhập tên của bạn" required>
-      <select id="choice" required></select>
-      <button type="submit">Vote</button>
-    </form>
-    <div class="msg" id="msg"></div>
-    <h3>Danh sách đã vote (<span id="periodLabel">Đầu tuần</span>):</h3>
-    <div id="summary" style="font-weight:bold; margin-bottom:10px;"></div>
-    <table id="voteTable">
-      <thead>
-        <tr><th>Tên</th><th>Ngày vote</th><th>Lựa chọn</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    
+    <div class="content">
+      <!-- Chọn đợt vote -->
+      <div class="period-selector">
+        <label><input type="radio" name="period" value="dau-tuan" checked> Đầu tuần (T2-T3-T4)</label>
+        <label><input type="radio" name="period" value="cuoi-tuan"> Cuối tuần (T6-T7-CN)</label>
+      </div>
+      
+      <form class="vote-form" id="voteForm">
+        <div class="form-group">
+          <input type="text" id="name" placeholder="Nhập tên của bạn" required>
+        </div>
+        <div class="form-group">
+          <select id="choice" required></select>
+        </div>
+        <div class="form-group">
+          <button type="submit" class="submit-btn">Gửi vote</button>
+        </div>
+      </form>
+      
+      <div class="message" id="msg" style="display: none;"></div>
+      
+      <div class="results-section">
+        <h3>Kết quả vote (<span id="periodLabel">Đầu tuần</span>)</h3>
+        <div class="summary" id="summary"></div>
+        <table class="votes-table" id="voteTable">
+          <thead>
+            <tr>
+              <th>Tên</th>
+              <th>Ngày vote</th>
+              <th>Lựa chọn</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
   </div>
+  
   <script>
     // Hàm lấy số tuần hiện tại
     function getWeekNumber(d) {
@@ -87,10 +308,11 @@
     const choiceSelect = document.getElementById("choice");
     const periodLabel = document.getElementById("periodLabel");
     const summary = document.getElementById("summary");
+    const msgElement = document.getElementById("msg");
 
     // Hàm render các ngày cho từng đợt vote
     function renderChoiceOptions(period) {
-      choiceSelect.innerHTML = '<option value="">--Chọn ngày--</option>';
+      choiceSelect.innerHTML = '<option value="">-- Chọn ngày --</option>';
       periodOptions[period].forEach(day => {
         const opt = document.createElement("option");
         opt.value = day;
@@ -119,6 +341,7 @@
         tbody.innerHTML = '';
         const data = snapshot.val();
         const countByDay = {};
+        
         if (data) {
           // Hiển thị mới nhất lên đầu
           const rows = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
@@ -130,13 +353,14 @@
             countByDay[row.choice] = (countByDay[row.choice] || 0) + 1;
           });
         }
+        
         // Thống kê tổng hợp vote
         let summaryStr = "";
         if (Object.keys(countByDay).length) {
           // Tìm ngày nhiều nhất
           const maxCount = Math.max(...Object.values(countByDay));
           for (const day in countByDay) {
-            summaryStr += `${day}: <b${countByDay[day] === maxCount ? ' style="color:#27ae60;"' : ''}>${countByDay[day]} người</b> &nbsp; `;
+            summaryStr += `${day}: <b${countByDay[day] === maxCount ? ' style="color:#059669;"' : ''}>${countByDay[day]} người</b> &nbsp; `;
           }
         } else {
           summaryStr = "<i>Chưa có ai vote.</i>";
@@ -147,12 +371,35 @@
     loadVotes();
 
     // ========== Gửi vote ==========
+    function showMessage(text, type = 'info') {
+      msgElement.textContent = text;
+      msgElement.style.display = 'block';
+      if (type === 'success') {
+        msgElement.style.background = '#d1fae5';
+        msgElement.style.color = '#065f46';
+        msgElement.style.borderColor = '#a7f3d0';
+      } else if (type === 'error') {
+        msgElement.style.background = '#fee2e2';
+        msgElement.style.color = '#991b1b';
+        msgElement.style.borderColor = '#fecaca';
+      } else {
+        msgElement.style.background = '#e0f2fe';
+        msgElement.style.color = '#0277bd';
+        msgElement.style.borderColor = '#b3e5fc';
+      }
+      setTimeout(() => {
+        msgElement.style.display = 'none';
+      }, 3000);
+    }
+
     document.getElementById('voteForm').onsubmit = function(e) {
       e.preventDefault();
       const name = document.getElementById('name').value.trim();
       const choice = document.getElementById('choice').value;
       if (!name || !choice) return;
-      document.getElementById('msg').innerText = "Đang gửi vote...";
+      
+      showMessage("Đang gửi vote...", 'info');
+      
       db.ref(`votes/${week}/${currentPeriod}/${name}`).set({
         name,
         date: new Date().toLocaleDateString('vi-VN'),
@@ -162,9 +409,11 @@
         timestamp: Date.now()
       }, (error) => {
         if (error) {
-          document.getElementById('msg').innerText = "Lỗi gửi vote, thử lại!";
+          showMessage("Lỗi gửi vote, vui lòng thử lại!", 'error');
         } else {
-          document.getElementById('msg').innerText = "Vote thành công! Cảm ơn bạn.";
+          showMessage("Vote thành công! Cảm ơn bạn.", 'success');
+          document.getElementById('name').value = '';
+          document.getElementById('choice').value = '';
         }
       });
     };
