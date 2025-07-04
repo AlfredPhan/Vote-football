@@ -240,7 +240,8 @@
           <input type="text" id="name" placeholder="Nhập tên của bạn" required>
         </div>
         <div class="form-group">
-          <select id="choice" required></select>
+          <div id="choices"></div>
+
         </div>
         <div class="form-group">
           <button type="submit" class="submit-btn">Gửi vote</button>
@@ -312,14 +313,21 @@
 
     // Hàm render các ngày cho từng đợt vote
     function renderChoiceOptions(period) {
-      choiceSelect.innerHTML = '<option value="">-- Chọn ngày --</option>';
-      periodOptions[period].forEach(day => {
-        const opt = document.createElement("option");
-        opt.value = day;
-        opt.textContent = day;
-        choiceSelect.appendChild(opt);
-      });
-    }
+  const container = document.getElementById('choices');
+  container.innerHTML = '';
+  periodOptions[period].forEach(day => {
+    const label = document.createElement("label");
+    label.style.marginRight = "10px";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = day;
+    checkbox.name = "choice";
+    label.appendChild(checkbox);
+    label.append(" " + day);
+    container.appendChild(label);
+  });
+}
+
 
     // Lắng nghe thay đổi đợt vote
     periodRadios.forEach(radio => {
@@ -336,38 +344,38 @@
 
     // ========== Load votes cho đợt hiện tại và tổng hợp ==========
     function loadVotes() {
-      db.ref(`votes/${week}/${currentPeriod}`).on("value", (snapshot) => {
-        const tbody = document.querySelector('#voteTable tbody');
-        tbody.innerHTML = '';
-        const data = snapshot.val();
-        const countByDay = {};
-        
-        if (data) {
-          // Hiển thị mới nhất lên đầu
-          const rows = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
-          rows.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${row.name}</td><td>${row.date}</td><td>${row.choice}</td>`;
-            tbody.appendChild(tr);
-            // Tổng hợp
-            countByDay[row.choice] = (countByDay[row.choice] || 0) + 1;
-          });
-        }
-        
-        // Thống kê tổng hợp vote
-        let summaryStr = "";
-        if (Object.keys(countByDay).length) {
-          // Tìm ngày nhiều nhất
-          const maxCount = Math.max(...Object.values(countByDay));
-          for (const day in countByDay) {
-            summaryStr += `${day}: <b${countByDay[day] === maxCount ? ' style="color:#059669;"' : ''}>${countByDay[day]} người</b> &nbsp; `;
-          }
-        } else {
-          summaryStr = "<i>Chưa có ai vote.</i>";
-        }
-        summary.innerHTML = summaryStr;
+  db.ref(`votes/${week}/${currentPeriod}`).on("value", (snapshot) => {
+    const tbody = document.querySelector('#voteTable tbody');
+    tbody.innerHTML = '';
+    const data = snapshot.val();
+    const countByDay = {};
+    if (data) {
+      // Hiển thị mới nhất lên đầu
+      const rows = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
+      rows.forEach(row => {
+        const votedDays = (row.choices || []);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${row.name}</td><td>${row.date}</td><td>${votedDays.join(', ')}</td>`;
+        tbody.appendChild(tr);
+        votedDays.forEach(day => {
+          countByDay[day] = (countByDay[day] || 0) + 1;
+        });
       });
     }
+    // Thống kê tổng hợp vote
+    let summaryStr = "";
+    if (Object.keys(countByDay).length) {
+      // Tìm ngày nhiều nhất
+      const maxCount = Math.max(...Object.values(countByDay));
+      for (const day in countByDay) {
+        summaryStr += `${day}: <b${countByDay[day] === maxCount ? ' style="color:#27ae60;"' : ''}>${countByDay[day]} người</b> &nbsp; `;
+      }
+    } else {
+      summaryStr = "<i>Chưa có ai vote.</i>";
+    }
+    summary.innerHTML = summaryStr;
+  });
+}
     loadVotes();
 
     // ========== Gửi vote ==========
@@ -393,30 +401,28 @@
     }
 
     document.getElementById('voteForm').onsubmit = function(e) {
-      e.preventDefault();
-      const name = document.getElementById('name').value.trim();
-      const choice = document.getElementById('choice').value;
-      if (!name || !choice) return;
-      
-      showMessage("Đang gửi vote...", 'info');
-      
-      db.ref(`votes/${week}/${currentPeriod}/${name}`).set({
-        name,
-        date: new Date().toLocaleDateString('vi-VN'),
-        choice,
-        week,
-        period: currentPeriod,
-        timestamp: Date.now()
-      }, (error) => {
-        if (error) {
-          showMessage("Lỗi gửi vote, vui lòng thử lại!", 'error');
-        } else {
-          showMessage("Vote thành công! Cảm ơn bạn.", 'success');
-          document.getElementById('name').value = '';
-          document.getElementById('choice').value = '';
-        }
-      });
-    };
+  e.preventDefault();
+  const name = document.getElementById('name').value.trim();
+  // Lấy tất cả checkbox đã tick
+  const choices = Array.from(document.querySelectorAll('#choices input[name="choice"]:checked')).map(cb => cb.value);
+  if (!name || choices.length === 0) return;
+  document.getElementById('msg').innerText = "Đang gửi vote...";
+  db.ref(`votes/${week}/${currentPeriod}/${name}`).set({
+    name,
+    date: new Date().toLocaleDateString('vi-VN'),
+    choices, // <--- lưu mảng
+    week,
+    period: currentPeriod,
+    timestamp: Date.now()
+  }, (error) => {
+    if (error) {
+      document.getElementById('msg').innerText = "Lỗi gửi vote, thử lại!";
+    } else {
+      document.getElementById('msg').innerText = "Vote thành công! Cảm ơn bạn.";
+    }
+  });
+};
+
   </script>
 </body>
 </html>
