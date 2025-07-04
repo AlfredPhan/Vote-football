@@ -25,20 +25,19 @@
   <div class="container">
     <h2>Bầu chọn ngày đá banh tuần này</h2>
     <div class="week-info" id="weekInfo"></div>
+    <!-- Chọn đợt vote -->
+    <div style="margin-bottom:14px">
+      <label><input type="radio" name="period" value="dau-tuan" checked> Đầu tuần (T2-T3-T4)</label>
+      <label style="margin-left:12px;"><input type="radio" name="period" value="cuoi-tuan"> Cuối tuần (T6-T7-CN)</label>
+    </div>
     <form id="voteForm">
       <input type="text" id="name" placeholder="Nhập tên của bạn" required>
-      <select id="choice" required>
-        <option value="">--Chọn ngày--</option>
-        <option value="Thứ 4">Thứ 4</option>
-        <option value="Thứ 5">Thứ 5</option>
-        <option value="Thứ 6">Thứ 6</option>
-        <option value="Thứ 7">Thứ 7</option>
-        <option value="Chủ Nhật">Chủ Nhật</option>
-      </select>
+      <select id="choice" required></select>
       <button type="submit">Vote</button>
     </form>
     <div class="msg" id="msg"></div>
-    <h3>Danh sách đã vote (tuần này):</h3>
+    <h3>Danh sách đã vote (<span id="periodLabel">Đầu tuần</span>):</h3>
+    <div id="summary" style="font-weight:bold; margin-bottom:10px;"></div>
     <table id="voteTable">
       <thead>
         <tr><th>Tên</th><th>Ngày vote</th><th>Lựa chọn</th></tr>
@@ -55,42 +54,71 @@
       var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
       return weekNo;
     }
-    // Hiện số tuần hiện tại
     const now = new Date();
     const week = getWeekNumber(now);
     document.getElementById('weekInfo').innerText = 
       "Tuần " + week + " (" + now.toLocaleDateString('vi-VN') + ")";
-  </script>
-  <script>
-    // ====== Dán đoạn cấu hình Firebase của bạn vào đây ======
     
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyCIZEY6HPUSr9TrFNd5ll6CW4Rb5nXWRYU",
-  authDomain: "football-vote-b352a.firebaseapp.com",
-  databaseURL: "https://football-vote-b352a-default-rtdb.firebaseio.com",
-  projectId: "football-vote-b352a",
-  storageBucket: "football-vote-b352a.appspot.com",
-  messagingSenderId: "30415817820",
-  appId: "1:30415817820:web:bb14f6004948d214b62a99",
-  measurementId: "G-70HX6VLXV6"
-};
-
-    // ========================================================
-
+    // ====== Firebase config ======
+    const firebaseConfig = {
+      apiKey: "AIzaSyCIZEY6HPUSr9TrFNd5ll6CW4Rb5nXWRYU",
+      authDomain: "football-vote-b352a.firebaseapp.com",
+      databaseURL: "https://football-vote-b352a-default-rtdb.firebaseio.com",
+      projectId: "football-vote-b352a",
+      storageBucket: "football-vote-b352a.appspot.com",
+      messagingSenderId: "30415817820",
+      appId: "1:30415817820:web:bb14f6004948d214b62a99",
+      measurementId: "G-70HX6VLXV6"
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Load vote real-time
+    // ========== Chọn đợt vote và render form ==========
+    const periodOptions = {
+      "dau-tuan": ["Thứ 2", "Thứ 3", "Thứ 4"],
+      "cuoi-tuan": ["Thứ 6", "Thứ 7", "Chủ Nhật"]
+    };
+    const periodLabels = {
+      "dau-tuan": "Đầu tuần",
+      "cuoi-tuan": "Cuối tuần"
+    };
+    let currentPeriod = "dau-tuan";
+    const periodRadios = document.querySelectorAll('input[name="period"]');
+    const choiceSelect = document.getElementById("choice");
+    const periodLabel = document.getElementById("periodLabel");
+    const summary = document.getElementById("summary");
+
+    // Hàm render các ngày cho từng đợt vote
+    function renderChoiceOptions(period) {
+      choiceSelect.innerHTML = '<option value="">--Chọn ngày--</option>';
+      periodOptions[period].forEach(day => {
+        const opt = document.createElement("option");
+        opt.value = day;
+        opt.textContent = day;
+        choiceSelect.appendChild(opt);
+      });
+    }
+
+    // Lắng nghe thay đổi đợt vote
+    periodRadios.forEach(radio => {
+      radio.addEventListener("change", e => {
+        currentPeriod = e.target.value;
+        periodLabel.textContent = periodLabels[currentPeriod];
+        renderChoiceOptions(currentPeriod);
+        loadVotes();
+      });
+    });
+
+    // Init mặc định
+    renderChoiceOptions(currentPeriod);
+
+    // ========== Load votes cho đợt hiện tại và tổng hợp ==========
     function loadVotes() {
-      db.ref("votes/" + week).on("value", (snapshot) => {
+      db.ref(`votes/${week}/${currentPeriod}`).on("value", (snapshot) => {
         const tbody = document.querySelector('#voteTable tbody');
         tbody.innerHTML = '';
         const data = snapshot.val();
+        const countByDay = {};
         if (data) {
           // Hiển thị mới nhất lên đầu
           const rows = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
@@ -98,25 +126,39 @@ const firebaseConfig = {
             const tr = document.createElement('tr');
             tr.innerHTML = `<td>${row.name}</td><td>${row.date}</td><td>${row.choice}</td>`;
             tbody.appendChild(tr);
+            // Tổng hợp
+            countByDay[row.choice] = (countByDay[row.choice] || 0) + 1;
           });
         }
+        // Thống kê tổng hợp vote
+        let summaryStr = "";
+        if (Object.keys(countByDay).length) {
+          // Tìm ngày nhiều nhất
+          const maxCount = Math.max(...Object.values(countByDay));
+          for (const day in countByDay) {
+            summaryStr += `${day}: <b${countByDay[day] === maxCount ? ' style="color:#27ae60;"' : ''}>${countByDay[day]} người</b> &nbsp; `;
+          }
+        } else {
+          summaryStr = "<i>Chưa có ai vote.</i>";
+        }
+        summary.innerHTML = summaryStr;
       });
     }
     loadVotes();
 
-    // Gửi vote
+    // ========== Gửi vote ==========
     document.getElementById('voteForm').onsubmit = function(e) {
       e.preventDefault();
       const name = document.getElementById('name').value.trim();
       const choice = document.getElementById('choice').value;
       if (!name || !choice) return;
       document.getElementById('msg').innerText = "Đang gửi vote...";
-      // Mỗi tên chỉ 1 vote/tuần (ghi đè nếu vote lại)
-      db.ref("votes/" + week + "/" + name).set({
+      db.ref(`votes/${week}/${currentPeriod}/${name}`).set({
         name,
         date: new Date().toLocaleDateString('vi-VN'),
         choice,
         week,
+        period: currentPeriod,
         timestamp: Date.now()
       }, (error) => {
         if (error) {
