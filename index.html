@@ -227,29 +227,27 @@
       <h2>Bầu chọn ngày đá banh only 19h30</h2>
       <div class="week-info" id="weekInfo"></div>
     </div>
-    
     <div class="content">
       <!-- Chọn đợt vote -->
       <div class="period-selector">
         <label><input type="radio" name="period" value="dau-tuan" checked> Đầu tuần (T2-T3-T4)</label>
         <label><input type="radio" name="period" value="cuoi-tuan"> Cuối tuần (T6-T7-CN)</label>
       </div>
-      
       <form class="vote-form" id="voteForm">
         <div class="form-group">
-          <input type="text" id="name" placeholder="Nhập tên của bạn" required>
+          <select id="name" required>
+            <option value="">--Chọn tên của bạn--</option>
+            <!-- Option tên sẽ được render ở JS -->
+          </select>
         </div>
         <div class="form-group">
           <div id="choices"></div>
-
         </div>
         <div class="form-group">
           <button type="submit" class="submit-btn">Gửi vote</button>
         </div>
       </form>
-      
       <div class="message" id="msg" style="display: none;"></div>
-      
       <div class="results-section">
         <h3>Kết quả vote (<span id="periodLabel">Đầu tuần</span>)</h3>
         <div class="summary" id="summary"></div>
@@ -268,6 +266,28 @@
   </div>
   
   <script>
+    // Tên thành viên cố định
+    const memberNames = [
+      "Trí", "Vũ", "Thiên", "Hoàng", "Hải Đăng", "Lê Ngọc", "Đại Bảo","Nhật","Sơn","Cường","Thịnh","Tiến","Công","Long",
+      "Đức","Nam","Phúc","Thái","Trường"
+      // Thêm tên thành viên ở đây (đúng chính tả, đúng dấu)
+    ];
+
+    // Hàm render select box tên thành viên
+    function renderNameOptions() {
+      const nameSelect = document.getElementById('name');
+      nameSelect.innerHTML = '<option value="">--Chọn tên của bạn--</option>';
+      memberNames.forEach(name => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        nameSelect.appendChild(option);
+      });
+    }
+    
+    // Gọi render tên ngay khi DOM ready
+    renderNameOptions();
+
     // Hàm lấy số tuần hiện tại
     function getWeekNumber(d) {
       d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -306,28 +326,26 @@
     };
     let currentPeriod = "dau-tuan";
     const periodRadios = document.querySelectorAll('input[name="period"]');
-    const choiceSelect = document.getElementById("choice");
     const periodLabel = document.getElementById("periodLabel");
     const summary = document.getElementById("summary");
     const msgElement = document.getElementById("msg");
 
     // Hàm render các ngày cho từng đợt vote
     function renderChoiceOptions(period) {
-  const container = document.getElementById('choices');
-  container.innerHTML = '';
-  periodOptions[period].forEach(day => {
-    const label = document.createElement("label");
-    label.style.marginRight = "10px";
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = day;
-    checkbox.name = "choice";
-    label.appendChild(checkbox);
-    label.append(" " + day);
-    container.appendChild(label);
-  });
-}
-
+      const container = document.getElementById('choices');
+      container.innerHTML = '';
+      periodOptions[period].forEach(day => {
+        const label = document.createElement("label");
+        label.style.marginRight = "10px";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = day;
+        checkbox.name = "choice";
+        label.appendChild(checkbox);
+        label.append(" " + day);
+        container.appendChild(label);
+      });
+    }
 
     // Lắng nghe thay đổi đợt vote
     periodRadios.forEach(radio => {
@@ -344,99 +362,75 @@
 
     // ========== Load votes cho đợt hiện tại và tổng hợp ==========
     function loadVotes() {
-  db.ref(`votes/${week}/${currentPeriod}`).on("value", (snapshot) => {
-    const tbody = document.querySelector('#voteTable tbody');
-    tbody.innerHTML = '';
-    const data = snapshot.val();
-    const countByDay = {};
-    if (data) {
-      // Hiển thị mới nhất lên đầu
-      const rows = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
-      rows.forEach(row => {
-        const votedDays = (row.choices || []);
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${row.name}</td><td>${row.date}</td><td>${votedDays.join(', ')}</td>`;
-        tbody.appendChild(tr);
-        votedDays.forEach(day => {
-          countByDay[day] = (countByDay[day] || 0) + 1;
-        });
+      db.ref(`votes/${week}/${currentPeriod}`).on("value", (snapshot) => {
+        const tbody = document.querySelector('#voteTable tbody');
+        tbody.innerHTML = '';
+        const data = snapshot.val();
+        const countByDay = {};
+        if (data) {
+          // Hiển thị mới nhất lên đầu
+          const rows = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
+          rows.forEach(row => {
+            const votedDays = (row.choices || []);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${row.name}</td><td>${row.date}</td><td>${votedDays.join(', ')}</td>`;
+            tbody.appendChild(tr);
+            votedDays.forEach(day => {
+              countByDay[day] = (countByDay[day] || 0) + 1;
+            });
+          });
+        }
+        // Thống kê tổng hợp vote
+        let summaryStr = "";
+        if (Object.keys(countByDay).length) {
+          // Tìm ngày nhiều nhất
+          const maxCount = Math.max(...Object.values(countByDay));
+          for (const day in countByDay) {
+            summaryStr += `${day}: <b${countByDay[day] === maxCount ? ' style="color:#27ae60;"' : ''}>${countByDay[day]} người</b> &nbsp; `;
+          }
+        } else {
+          summaryStr = "<i>Chưa có ai vote.</i>";
+        }
+        summary.innerHTML = summaryStr;
       });
     }
-    // Thống kê tổng hợp vote
-    let summaryStr = "";
-    if (Object.keys(countByDay).length) {
-      // Tìm ngày nhiều nhất
-      const maxCount = Math.max(...Object.values(countByDay));
-      for (const day in countByDay) {
-        summaryStr += `${day}: <b${countByDay[day] === maxCount ? ' style="color:#27ae60;"' : ''}>${countByDay[day]} người</b> &nbsp; `;
-      }
-    } else {
-      summaryStr = "<i>Chưa có ai vote.</i>";
-    }
-    summary.innerHTML = summaryStr;
-  });
-}
     loadVotes();
 
     // ========== Gửi vote ==========
-    function showMessage(text, type = 'info') {
-      msgElement.textContent = text;
-      msgElement.style.display = 'block';
-      if (type === 'success') {
-        msgElement.style.background = '#d1fae5';
-        msgElement.style.color = '#065f46';
-        msgElement.style.borderColor = '#a7f3d0';
-      } else if (type === 'error') {
-        msgElement.style.background = '#fee2e2';
-        msgElement.style.color = '#991b1b';
-        msgElement.style.borderColor = '#fecaca';
-      } else {
-        msgElement.style.background = '#e0f2fe';
-        msgElement.style.color = '#0277bd';
-        msgElement.style.borderColor = '#b3e5fc';
-      }
-      setTimeout(() => {
-        msgElement.style.display = 'none';
-      }, 3000);
-    }
-
     document.getElementById('voteForm').onsubmit = function(e) {
-  e.preventDefault();
-  const name = document.getElementById('name').value.trim();
-  // Lấy tất cả checkbox đã tick
-  const choices = Array.from(document.querySelectorAll('#choices input[name="choice"]:checked')).map(cb => cb.value);
-  if (!name || choices.length === 0) return;
-  document.getElementById('msg').innerText = "Đang gửi vote...";
-  db.ref(`votes/${week}/${currentPeriod}/${name}`).set({
-    name,
-    date: new Date().toLocaleDateString('vi-VN'),
-    choices, // <--- lưu mảng
-    week,
-    period: currentPeriod,
-    timestamp: Date.now()
-  }, (error) => {
-    if (error) {
-      document.getElementById('msg').innerText = "Lỗi gửi vote, thử lại!";
-    } else {
-      document.getElementById('msg').innerText = "Vote thành công! Cảm ơn bạn.";
-    }
-  });
-};
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const choices = Array.from(document.querySelectorAll('#choices input[name="choice"]:checked')).map(cb => cb.value);
+      if (!name || choices.length === 0) return;
+      document.getElementById('msg').innerText = "Đang gửi vote...";
+      db.ref(`votes/${week}/${currentPeriod}/${name}`).set({
+        name,
+        date: new Date().toLocaleDateString('vi-VN'),
+        choices,
+        week,
+        period: currentPeriod,
+        timestamp: Date.now()
+      }, (error) => {
+        if (error) {
+          document.getElementById('msg').innerText = "Lỗi gửi vote, thử lại!";
+        } else {
+          document.getElementById('msg').innerText = "Vote thành công! Cảm ơn bạn.";
+        }
+      });
+    };
 
-// Chặn chuột phải
-document.addEventListener('contextmenu', event => event.preventDefault());
-
-// Chặn F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+U
-document.onkeydown = function(e) {
-  if (
-    e.keyCode === 123 || // F12
-    (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || // Ctrl+Shift+I/J/C
-    (e.ctrlKey && e.keyCode === 85) // Ctrl+U
-  ) {
-    return false;
-  }
-};
-
+    // Chặn chuột phải
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    // Chặn F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+U
+    document.onkeydown = function(e) {
+      if (
+        e.keyCode === 123 || // F12
+        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || // Ctrl+Shift+I/J/C
+        (e.ctrlKey && e.keyCode === 85) // Ctrl+U
+      ) {
+        return false;
+      }
+    };
   </script>
 </body>
 </html>
