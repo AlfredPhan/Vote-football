@@ -17,6 +17,9 @@
     th { background: #d2f4e1; }
     .week-info { font-size: 14px; color: #999; margin-bottom: 14px;}
   </style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
   <div class="container">
@@ -44,8 +47,6 @@
     </table>
   </div>
   <script>
-    // === CONFIG: dán URL API Google Script của bạn vào đây ===
-    const API_URL = "https://script.google.com/macros/s/AKfycbzuuFamVmRAu2ykbSDyiDqBcLMZrHD5cx4UTIGCFExrws8u6lvxvaLPL9T_A3EtHj-l/exec";
     // Hàm lấy số tuần hiện tại
     function getWeekNumber(d) {
       d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -59,48 +60,75 @@
     const week = getWeekNumber(now);
     document.getElementById('weekInfo').innerText = 
       "Tuần " + week + " (" + now.toLocaleDateString('vi-VN') + ")";
-    // Load danh sách vote
+  </script>
+  <script>
+    // ====== Dán đoạn cấu hình Firebase của bạn vào đây ======
+    // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCIZEY6HPUSr9TrFNd5ll6CW4Rb5nXWRYU",
+  authDomain: "football-vote-b352a.firebaseapp.com",
+  databaseURL: "https://football-vote-b352a-default-rtdb.firebaseio.com",
+  projectId: "football-vote-b352a",
+  storageBucket: "football-vote-b352a.firebasestorage.app",
+  messagingSenderId: "30415817820",
+  appId: "1:30415817820:web:bb14f6004948d214b62a99",
+  measurementId: "G-70HX6VLXV6"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+    // ========================================================
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Load vote real-time
     function loadVotes() {
-      fetch(API_URL)
-        .then(res => res.json())
-        .then(data => {
-          // Lọc theo tuần hiện tại
-          const votes = data.filter(row => +row.week === week);
-          const tbody = document.querySelector('#voteTable tbody');
-          tbody.innerHTML = '';
-          votes.reverse().forEach(row => {
+      db.ref("votes/" + week).on("value", (snapshot) => {
+        const tbody = document.querySelector('#voteTable tbody');
+        tbody.innerHTML = '';
+        const data = snapshot.val();
+        if (data) {
+          // Hiển thị mới nhất lên đầu
+          const rows = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
+          rows.forEach(row => {
             const tr = document.createElement('tr');
             tr.innerHTML = `<td>${row.name}</td><td>${row.date}</td><td>${row.choice}</td>`;
             tbody.appendChild(tr);
           });
-        });
+        }
+      });
     }
     loadVotes();
+
     // Gửi vote
     document.getElementById('voteForm').onsubmit = function(e) {
       e.preventDefault();
       const name = document.getElementById('name').value.trim();
       const choice = document.getElementById('choice').value;
       if (!name || !choice) return;
-      // Gửi vote
       document.getElementById('msg').innerText = "Đang gửi vote...";
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({
-          name,
-          date: new Date().toLocaleDateString('vi-VN'),
-          choice,
-          week
-        }),
-        headers: { "Content-Type": "application/json" }
-      })
-      .then(res => res.text())
-      .then(() => {
-        document.getElementById('msg').innerText = "Vote thành công! Cảm ơn bạn.";
-        loadVotes();
-      })
-      .catch(() => {
-        document.getElementById('msg').innerText = "Lỗi gửi vote, thử lại!";
+      // Mỗi tên chỉ 1 vote/tuần (ghi đè nếu vote lại)
+      db.ref("votes/" + week + "/" + name).set({
+        name,
+        date: new Date().toLocaleDateString('vi-VN'),
+        choice,
+        week,
+        timestamp: Date.now()
+      }, (error) => {
+        if (error) {
+          document.getElementById('msg').innerText = "Lỗi gửi vote, thử lại!";
+        } else {
+          document.getElementById('msg').innerText = "Vote thành công! Cảm ơn bạn.";
+        }
       });
     };
   </script>
